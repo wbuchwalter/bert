@@ -160,16 +160,28 @@ class BertModel(object):
 
     input_shape = get_shape_list(input_ids, expected_rank=2)
     batch_size = input_shape[0]
+    # WB: All samples are zero-padded to be of len == sequence_length
+    # input_mask is set to 0 for all padding and other tokens so that
+    # the model doesn't attend to these tokens
     seq_length = input_shape[1]
 
+    # WB: Unsure when we wouldn't pass masks or token types
     if input_mask is None:
       input_mask = tf.ones(shape=[batch_size, seq_length], dtype=tf.int32)
 
+    # WB: token_type_ids is referred as segment_ids in run_classifier.
+    # This distinguishes the different part of the input. For example in MRPC
+    # we are asked wether two sentences are similar. Each of the two sentences are considered
+    # to be a segment. First segment will have token_type (or segment_id) == 0, and second segment == 1
     if token_type_ids is None:
       token_type_ids = tf.zeros(shape=[batch_size, seq_length], dtype=tf.int32)
 
     with tf.variable_scope(scope, default_name="bert"):
       with tf.variable_scope("embeddings"):
+
+        # WB: This is a learned embedding. So it is simply a
+        # vocab_size x embedding_size matrix that is updated during training
+
         # Perform embedding lookup on the word ids.
         (self.embedding_output, self.embedding_table) = embedding_lookup(
             input_ids=input_ids,
@@ -398,6 +410,9 @@ def embedding_lookup(input_ids,
   Returns:
     float Tensor of shape [batch_size, seq_length, embedding_size].
   """
+
+  # WB: No idea what num_inputs is supposed to be here.
+
   # This function assumes that the input is of shape [batch_size, seq_length,
   # num_inputs].
   #
@@ -462,7 +477,12 @@ def embedding_postprocessor(input_tensor,
   Raises:
     ValueError: One of the tensor shapes or input values is invalid.
   """
-  input_shape = get_shape_list(input_tensor, expected_rank=3)
+
+  # WB: Token Type embeddings are referred to as "Segment Embeddings" in the paper. 
+  # Token Type embeddings are NOT token embeddings in the paper
+
+
+  input_shape = get_shape_list(input_ tensor, expected_rank=3)
   batch_size = input_shape[0]
   seq_length = input_shape[1]
   width = input_shape[2]
@@ -472,7 +492,10 @@ def embedding_postprocessor(input_tensor,
   if use_token_type:
     if token_type_ids is None:
       raise ValueError("`token_type_ids` must be specified if"
-                       "`use_token_type` is True.")
+                       "`use_token_type` is True.")full_position_embeddings
+
+    # WB: It seems we now want to learn the segment embeddings while it seemed to be 
+    # hardcoded before. What is the purpose of this?
     token_type_table = tf.get_variable(
         name=token_type_embedding_name,
         shape=[token_type_vocab_size, width],
@@ -489,6 +512,10 @@ def embedding_postprocessor(input_tensor,
   if use_position_embeddings:
     assert_op = tf.assert_less_equal(seq_length, max_position_embeddings)
     with tf.control_dependencies([assert_op]):
+
+      # WB: Adding a third learned embeddings for position encoding.
+      # It is unclear to me how the position get's encoded however.
+
       full_position_embeddings = tf.get_variable(
           name=position_embedding_name,
           shape=[max_position_embeddings, width],
@@ -566,10 +593,102 @@ def attention_layer(from_tensor,
                     attention_probs_dropout_prob=0.0,
                     initializer_range=0.02,
                     do_return_2d_tensor=False,
-                    batch_size=None,
-                    from_seq_length=None,
-                    to_seq_length=None):
-  """Performs multi-headed attention from `from_tensor` to `to_tensor`.
+              
+  # `query_layer` = [B*F, N*H]
+  query_layer = tf.layers.dense(
+      from_tensor_2d,
+      num_attention_heads * size_per_head,
+      activation=query_act,
+      name="query",
+      kernel_initializer=create_initializer(initializer_range))
+
+  # `key_layer` = [B*T, N*H]
+  key_layer = tf.layers.dense(
+      to_tensor_2d,
+      num_attention_heads * size_per_head,
+      activation=key_act,
+      name="key",
+      kernel_initializer=create_initializer(initializer_range))
+
+  # `value_layer` = [B*T, N*H]
+  value_layer = tf.layers.dense(
+      to_tensor_2d,
+      num_attention_heads * size_per_head,
+      activation=value_act,
+      name="value",
+      kernel_initializer=create_initializer(initializer_range))      batch_size=None,
+              
+  # `query_layer` = [B*F, N*H]
+  query_layer = tf.layers.dense(
+      from_tensor_2d,
+      num_attention_heads * size_per_head,
+      activation=query_act,
+      name="query",
+      kernel_initializer=create_initializer(initializer_range))
+
+  # `key_layer` = [B*T, N*H]
+  key_layer = tf.layers.dense(
+      to_tensor_2d,
+      num_attention_heads * size_per_head,
+      activation=key_act,
+      name="key",
+      kernel_initializer=create_initializer(initializer_range))
+
+  # `value_layer` = [B*T, N*H]
+  value_layer = tf.layers.dense(
+      to_tensor_2d,
+      num_attention_heads * size_per_head,
+      activation=value_act,
+      name="value",
+      kernel_initializer=create_initializer(initializer_range))      from_seq_length=None,
+              
+  # `query_layer` = [B*F, N*H]
+  query_layer = tf.layers.dense(
+      from_tensor_2d,
+      num_attention_heads * size_per_head,
+      activation=query_act,
+      name="query",
+      kernel_initializer=create_initializer(initializer_range))
+
+  # `key_layer` = [B*T, N*H]
+  key_layer = tf.layers.dense(
+      to_tensor_2d,
+      num_attention_heads * size_per_head,
+      activation=key_act,
+      name="key",
+      kernel_initializer=create_initializer(initializer_range))
+
+  # `value_layer` = [B*T, N*H]
+  value_layer = tf.layers.dense(
+      to_tensor_2d,
+      num_attention_heads * size_per_head,
+      activation=value_act,
+      name="value",
+      kernel_initializer=create_initializer(initializer_range))      to_seq_length=None):
+  """Performs 
+  # `query_layer` = [B*F, N*H]
+  query_layer = tf.layers.dense(
+      from_tensor_2d,
+      num_attention_heads * size_per_head,
+      activation=query_act,
+      name="query",
+      kernel_initializer=create_initializer(initializer_range))
+
+  # `key_layer` = [B*T, N*H]
+  key_layer = tf.layers.dense(
+      to_tensor_2d,
+      num_attention_heads * size_per_head,
+      activation=key_act,
+      name="key",
+      kernel_initializer=create_initializer(initializer_range))
+
+  # `value_layer` = [B*T, N*H]
+  value_layer = tf.layers.dense(
+      to_tensor_2d,
+      num_attention_heads * size_per_head,
+      activation=value_act,
+      name="value",
+      kernel_initializer=create_initializer(initializer_range))multi-headed attention from `from_tensor` to `to_tensor`.
 
   This is an implementation of multi-headed attention based on "Attention
   is all you Need". If `from_tensor` and `to_tensor` are the same, then
@@ -752,10 +871,15 @@ def attention_layer(from_tensor,
 
 
 def transformer_model(input_tensor,
+                      # WB: This masks the tokens we don't want to attend to, such as 
+                      # the word we are looking to predict, or the padding tokens etc.
                       attention_mask=None,
+                      # WB: Size of the transorfmer? What does it concretly mean?
                       hidden_size=768,
+                      # WB: number of encoder blocks
                       num_hidden_layers=12,
                       num_attention_heads=12,
+                      # WB: Size of the FFN
                       intermediate_size=3072,
                       intermediate_act_fn=gelu,
                       hidden_dropout_prob=0.1,
