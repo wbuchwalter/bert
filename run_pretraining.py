@@ -466,9 +466,9 @@ def main(_):
     # or GPU.
     estimator = tf.estimator.Estimator(        
         model_fn=model_fn,
-        config=run_config,
-        train_batch_size=FLAGS.train_batch_size,
-        eval_batch_size=FLAGS.eval_batch_size)
+        config=run_config)
+        # train_batch_size=FLAGS.train_batch_size,
+        # eval_batch_size=FLAGS.eval_batch_size)
 
     if FLAGS.do_train:
         tf.logging.info("***** Running training *****")
