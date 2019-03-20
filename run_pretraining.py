@@ -452,7 +452,7 @@ def main(_):
     run_config = tf.estimator.RunConfig(
         model_dir=FLAGS.output_dir,
         save_checkpoints_steps=FLAGS.save_checkpoints_steps,
-        session_config=tf.ConfigProto(log_device_placement=True),
+        #session_config=tf.ConfigProto(log_device_placement=True),
         device_fn=None
     )
 

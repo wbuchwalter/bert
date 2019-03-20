@@ -210,7 +210,8 @@ class BertModel(object):
             raise ValueError(
               "The hidden size (%d) is not a multiple of the number of "
               "GPUs (%d)" % (config.num_hidden_layers, gpu_count))
-          with tf.device('/gpu:{}'.format(gpu_id)):
+          with tf.device('/device:GPU:{}'.format(gpu_id)):
+            tf.logging.info('Putting transformer layers on /device:GPU:{}:{}'.format(gpu_id))
             self.all_encoder_layers.extend(
               transformer_model(
                 input_tensor=input_tensor,
