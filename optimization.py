@@ -23,7 +23,7 @@ import tensorflow as tf
 from memory_saving_gradients import gradients
 
 
-def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu):
+def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu, checkpoint_gradients=False):
   """Creates an optimizer training op."""
   global_step = tf.train.get_or_create_global_step()
 
@@ -69,7 +69,11 @@ def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu):
     optimizer = tf.contrib.tpu.CrossShardOptimizer(optimizer)
 
   tvars = tf.trainable_variables()
-  grads = gradients(loss, tvars)
+
+  if checkpoint_gradients:
+    grads = gradients(loss, tvars, checkpoints='memory')
+  else:
+    grads = tf.gradients(loss, tvars)
 
   # This is how the model was pre-trained.
   (grads, _) = tf.clip_by_global_norm(grads, clip_norm=1.0)
