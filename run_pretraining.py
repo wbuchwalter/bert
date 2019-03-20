@@ -65,6 +65,8 @@ flags.DEFINE_bool("checkpoint_gradients", False, "Whether to enable gradients ch
 
 flags.DEFINE_integer("gpu_count", 1, "Number of GPUs to use.")
 
+flags.DEFINE_bool("allow_mem_growth", False, "Wether to allow GPU memory growth, or allocate everything at the beginning.")
+
 flags.DEFINE_integer("train_batch_size", 32, "Total batch size for training.")
 
 flags.DEFINE_integer("eval_batch_size", 8, "Total batch size for eval.")
@@ -449,10 +451,13 @@ def main(_):
 #           num_shards=FLAGS.num_tpu_cores,
 #           per_host_input_for_training=is_per_host))
 
+    session_config = tf.ConfigProto()
+    session_config.gpu_options.allow_growth = FLAGS.allow_mem_growth
+    #session_config.log_device_placement=True
     run_config = tf.estimator.RunConfig(
         model_dir=FLAGS.output_dir,
         save_checkpoints_steps=FLAGS.save_checkpoints_steps,
-        #session_config=tf.ConfigProto(log_device_placement=True),
+        session_config=session_config,
         device_fn=None
     )
 
