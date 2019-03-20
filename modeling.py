@@ -216,7 +216,7 @@ class BertModel(object):
                 input_tensor=input_tensor,
                 attention_mask=attention_mask,
                 hidden_size=config.hidden_size,
-                num_hidden_layers=config.num_hidden_layers/gpu_count,
+                num_hidden_layers=config.num_hidden_layers//gpu_count,
                 num_attention_heads=config.num_attention_heads,
                 intermediate_size=config.intermediate_size,
                 intermediate_act_fn=get_activation(config.hidden_act),

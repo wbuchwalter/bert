@@ -63,6 +63,8 @@ flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
 
 flags.DEFINE_bool("checkpoint_gradients", False, "Whether to enable gradients checkpointing.")
 
+flags.DEFINE_integer("gpu_count", 1, "Number of GPUs to use.")
+
 flags.DEFINE_integer("train_batch_size", 32, "Total batch size for training.")
 
 flags.DEFINE_integer("eval_batch_size", 8, "Total batch size for eval.")
@@ -138,7 +140,8 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
             input_ids=input_ids,
             input_mask=input_mask,
             token_type_ids=segment_ids,
-            use_one_hot_embeddings=use_one_hot_embeddings)
+            use_one_hot_embeddings=use_one_hot_embeddings,
+            gpu_count=FLAGS.gpu_count)
 
         (masked_lm_loss,
          masked_lm_example_loss, masked_lm_log_probs) = get_masked_lm_output(
