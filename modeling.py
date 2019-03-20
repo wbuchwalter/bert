@@ -135,6 +135,7 @@ class BertModel(object):
                input_mask=None,
                token_type_ids=None,
                use_one_hot_embeddings=False,
+               gpu_count=1,
                scope=None):
     """Constructor for BertModel.
 
@@ -202,18 +203,28 @@ class BertModel(object):
 
         # Run the stacked transformer.
         # `sequence_output` shape = [batch_size, seq_length, hidden_size].
-        self.all_encoder_layers = transformer_model(
-            input_tensor=self.embedding_output,
-            attention_mask=attention_mask,
-            hidden_size=config.hidden_size,
-            num_hidden_layers=config.num_hidden_layers,
-            num_attention_heads=config.num_attention_heads,
-            intermediate_size=config.intermediate_size,
-            intermediate_act_fn=get_activation(config.hidden_act),
-            hidden_dropout_prob=config.hidden_dropout_prob,
-            attention_probs_dropout_prob=config.attention_probs_dropout_prob,
-            initializer_range=config.initializer_range,
-            do_return_all_layers=True)
+        self.all_encoder_layers = []
+        input_tensor = self.embedding_output
+        for gpu_id in range(gpu_count):
+          if config.num_hidden_layers % 2 != 0:
+            raise ValueError(
+              "The hidden size (%d) is not a multiple of the number of "
+              "GPUs (%d)" % (config.num_hidden_layers, gpu_count))
+          with tf.device('/gpu:{}'.format(gpu_id)):
+            self.all_encoder_layers.extend(
+              transformer_model(
+                input_tensor=input_tensor,
+                attention_mask=attention_mask,
+                hidden_size=config.hidden_size,
+                num_hidden_layers=config.num_hidden_layers/gpu_count,
+                num_attention_heads=config.num_attention_heads,
+                intermediate_size=config.intermediate_size,
+                intermediate_act_fn=get_activation(config.hidden_act),
+                hidden_dropout_prob=config.hidden_dropout_prob,
+                attention_probs_dropout_prob=config.attention_probs_dropout_prob,
+                initializer_range=config.initializer_range,
+                do_return_all_layers=True)
+            )
 
       self.sequence_output = self.all_encoder_layers[-1]
       # The "pooler" converts the encoded sequence tensor of shape
