@@ -212,7 +212,7 @@ class BertModel(object):
               "GPUs (%d)" % (config.num_hidden_layers, gpu_count))
           with tf.device('/device:GPU:{}'.format(gpu_id)):
             tf.logging.info('Putting transformer layers on /device:GPU:{}'.format(gpu_id))
-            with tf.variable_scope("GPU:{}".format(gpu_id)):
+            with tf.variable_scope("GPU_{}".format(gpu_id)):
               self.all_encoder_layers.extend(
                 transformer_model(
                   input_tensor=input_tensor,
