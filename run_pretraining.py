@@ -333,12 +333,13 @@ def input_fn_builder(input_files,
                      max_seq_length,
                      max_predictions_per_seq,
                      is_training,
-                     num_cpu_threads=4):
+                     batch_size,
+                     num_cpu_threads=4,):
     """Creates an `input_fn` closure to be passed to TPUEstimator."""
 
     def input_fn(params):
         """The actual input function."""
-        batch_size = params["batch_size"]
+        # batch_size = params["batch_size"]
 
         name_to_features = {
             "input_ids":
@@ -477,7 +478,8 @@ def main(_):
             input_files=input_files,
             max_seq_length=FLAGS.max_seq_length,
             max_predictions_per_seq=FLAGS.max_predictions_per_seq,
-            is_training=True)
+            is_training=True,
+            batch_size=FLAGS.train_batch_size)
         estimator.train(input_fn=train_input_fn,
                         max_steps=FLAGS.num_train_steps)
 
@@ -489,7 +491,8 @@ def main(_):
             input_files=input_files,
             max_seq_length=FLAGS.max_seq_length,
             max_predictions_per_seq=FLAGS.max_predictions_per_seq,
-            is_training=False)
+            is_training=False,
+            batch_size=FLAGS.eval_batch_size)
 
         result = estimator.evaluate(
             input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
