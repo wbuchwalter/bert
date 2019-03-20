@@ -212,20 +212,21 @@ class BertModel(object):
               "GPUs (%d)" % (config.num_hidden_layers, gpu_count))
           with tf.device('/device:GPU:{}'.format(gpu_id)):
             tf.logging.info('Putting transformer layers on /device:GPU:{}'.format(gpu_id))
-            self.all_encoder_layers.extend(
-              transformer_model(
-                input_tensor=input_tensor,
-                attention_mask=attention_mask,
-                hidden_size=config.hidden_size,
-                num_hidden_layers=config.num_hidden_layers//gpu_count,
-                num_attention_heads=config.num_attention_heads,
-                intermediate_size=config.intermediate_size,
-                intermediate_act_fn=get_activation(config.hidden_act),
-                hidden_dropout_prob=config.hidden_dropout_prob,
-                attention_probs_dropout_prob=config.attention_probs_dropout_prob,
-                initializer_range=config.initializer_range,
-                do_return_all_layers=True)
-            )
+            with tf.variable_scope("GPU:{}".format(gpu_id)):
+              self.all_encoder_layers.extend(
+                transformer_model(
+                  input_tensor=input_tensor,
+                  attention_mask=attention_mask,
+                  hidden_size=config.hidden_size,
+                  num_hidden_layers=config.num_hidden_layers//gpu_count,
+                  num_attention_heads=config.num_attention_heads,
+                  intermediate_size=config.intermediate_size,
+                  intermediate_act_fn=get_activation(config.hidden_act),
+                  hidden_dropout_prob=config.hidden_dropout_prob,
+                  attention_probs_dropout_prob=config.attention_probs_dropout_prob,
+                  initializer_range=config.initializer_range,
+                  do_return_all_layers=True)
+              )
 
       self.sequence_output = self.all_encoder_layers[-1]
       # The "pooler" converts the encoded sequence tensor of shape
